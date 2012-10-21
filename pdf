@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import glob
+import shutil
+import subprocess
+
+"""
+Run pdf in the assignment directory.
+e.g., in COMP360/ass1.
+Or, pass it the path to the assignment directory.
+"""
+
+YOUR_NAME = 'Your name here'
+STUDENT_ID = '123456789'
+
+if len(sys.argv) > 1:
+    assignment_dir = sys.argv[1]
+    os.chdir(assignment_dir)
+
+cwd = os.getcwd()
+assignment_name = os.path.basename(cwd)
+course_name = os.path.basename(os.path.dirname(cwd))
+
+# Figure out the assignment number from the directory name
+assignment_num = int(assignment_name[3:])
+
+# Add a space between, e.g., COMP and 360
+course_name = course_name[:4] + ' ' + course_name[4:]
+
+print "Generating assignment %d for %s" % (assignment_num, course_name)
+
+# Open the resource files
+resources_dir = os.path.join(os.path.dirname(__file__), 'pdf_resources')
+header_file = open(os.path.join(resources_dir, 'header.tex'))
+header = header_file.read() % {
+    'your_name': YOUR_NAME,
+    'student_id': STUDENT_ID,
+    'course_name': course_name,
+    'assignment_num': assignment_num,
+}
+
+full_file = open('full.tex', 'w')
+full_file.write(header)
+
+footer_file = open(os.path.join(resources_dir, 'footer.tex'))
+footer = footer_file.read()
+
+question_template_file = open(os.path.join(resources_dir, 'question.tex'))
+question_template = question_template_file.read()
+
+# Now go through all the tex files in the current directory
+i = 1
+while True:
+    print "Converting question %d" % i
+    question_filename = "%d.tex" % i
+    try:
+        question_file = open(question_filename)
+        question = question_template % {
+            'question': question_file.read()
+        }
+        full_file.write(question)
+        i += 1
+    except IOError:
+        break
+
+print "Done with questions"
+
+if i == 1:
+    # No correctly-named question files exist in this directory!
+    print "ERROR. Not enough files ..."
+else:
+    full_file.write(footer)
+    full_file.close()
+
+    print "About to generate the pdf"
+    command = "pdflatex -interaction=nonstopmode --jobname=%s full > /dev/null" % assignment_name
+    error = subprocess.call(command, shell=True)
+    if error:
+        print "OH GOD ERROR"
+        raise SystemError
+    else:
+        print "Done generating the PDF!"
+
+        # Copy it over to the public_html directory
+        pdf_path = "%s.pdf" % assignment_name
+        dest_path = "/home/2010/wliu65/public_html/%s/%s" % (
+            course_name.replace(' ', '').lower(), pdf_path)
+        shutil.copyfile(pdf_path, dest_path)
+        print "Done copying to %s" % dest_path
