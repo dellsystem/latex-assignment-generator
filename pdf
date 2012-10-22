@@ -15,6 +15,13 @@ Or, pass it the path to the assignment directory.
 YOUR_NAME = 'Your name here'
 STUDENT_ID = '123456789'
 
+"""
+If you also want to copy it over to another directory, define it here, using
+%(course_name)s and %(pdf_path)s if desired
+e.g., /home/me/public_html/%(course_name)s/%(pdf_path)s
+"""
+PUBLIC_DIR = None
+
 if len(sys.argv) > 1:
     assignment_dir = sys.argv[1]
     os.chdir(assignment_dir)
@@ -84,8 +91,11 @@ else:
         print "Done generating the PDF!"
 
         # Copy it over to the public_html directory
-        pdf_path = "%s.pdf" % assignment_name
-        dest_path = "/home/2010/wliu65/public_html/%s/%s" % (
-            course_name.replace(' ', '').lower(), pdf_path)
-        shutil.copyfile(pdf_path, dest_path)
+        if PUBLIC_DIR is not None:
+            pdf_path = "%s.pdf" % assignment_name
+            dest_path = PUBLIC_DIR % {
+                'course_name': course_name.replace(' ', '').lower(),
+                'pdf_path': pdf_path
+            }
+            shutil.copyfile(pdf_path, dest_path)
         print "Done copying to %s" % dest_path
